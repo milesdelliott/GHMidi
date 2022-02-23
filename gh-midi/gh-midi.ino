@@ -5,7 +5,7 @@
    and a toggle switch for setting whether the buttons
    send note messages or CC messages.
 
-   The toggle switch is connected to input pin 0,
+   The toggle switch is connected to              input pin 0,
    and the push buttons are connected to input pins 1 - 8.
 
    You must select MIDI from the "Tools > USB Type" menu for this code to compile.
@@ -20,13 +20,13 @@
 // include MIDI library
 #include <MIDI.h>
 #include <Bounce.h>
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI1);
 const int channel = 1;
 //The number of push buttons
 const int NUM_OF_BUTTONS = 9;
 
 // the MIDI channel number to send messages
-const int MIDI_CHAN = 1;
+const int MIDI_CHAN = MIDI_CHANNEL_OMNI;
 
 // Create Bounce objects for each button and switch. The Bounce object
 // automatically deals with contact chatter or "bounce", and
@@ -57,7 +57,7 @@ const int MIDI_MODE_CCS = 1;
 int midiMode = MIDI_MODE_NOTES;
 
 //Arrays the store the exact note and CC messages each push button will send.
-const int MIDI_NOTE_NUMS[NUM_OF_BUTTONS] = {64, 59, 55, 50, 45, 40, 39, 38, 37};
+const int MIDI_NOTE_NUMS[NUM_OF_BUTTONS] = {60, 59, 55, 50, 45, 40, 39, 38, 37};
 const int MIDI_NOTE_VELS[NUM_OF_BUTTONS] = {110, 110, 110, 110, 110, 110, 110, 110, 110};
 const int MIDI_CC_NUMS[NUM_OF_BUTTONS] = {24, 25, 26, 27, 20, 21, 22, 23, 28};
 const int MIDI_CC_VALS[NUM_OF_BUTTONS] = {127, 127, 127, 127, 127, 127, 127, 127, 127};
@@ -71,7 +71,8 @@ const int MIDI_CC_PINS[NUM_OF_BUTTONS] = {12, 11, 10, 9, 8, 14, 15, 16, 17};
 
 void setup()
 {
-  MIDI.begin(MIDI_CHAN);
+    Serial.begin(115200);
+  MIDI1.begin(MIDI_CHAN);
   // Configure the pins for input mode with pullup resistors.
   // The buttons/switch connect from each pin to ground.  When
   // the button is pressed/on, the pin reads LOW because the button
@@ -91,6 +92,8 @@ void setup()
   pinMode (15, INPUT_PULLUP);
   pinMode (16, INPUT_PULLUP);
   pinMode (17, INPUT_PULLUP);
+    // initialize the digital pin as an output.
+  pinMode(13, OUTPUT);
   Serial.println("Begin");
 }
 
@@ -101,8 +104,7 @@ void setup()
 
 void loop()
 {
-  Serial.println("Loop");
-  MIDI.sendNoteOn (MIDI_NOTE_NUMS[0], MIDI_NOTE_VELS[0], MIDI_CHAN);
+  digitalWrite(13, HIGH);   // set the LED on
   //==============================================================================
   // Update all the buttons/switch. There should not be any long
   // delays in loop(), so this runs repetitively at a rate
@@ -117,18 +119,16 @@ void loop()
 
   for (int i = 0; i < NUM_OF_BUTTONS; i++)
   {
-    int pin = MIDI_CC_PINS[i];
     //========================================
     // Check each button for "falling" edge.
     // Falling = high (not pressed - voltage from pullup resistor) to low (pressed - button connects pin to ground)
 
     if (buttons[i].fallingEdge())
     {
-      Serial.println("FALLING ON");
       //If in note mode send a MIDI note-on message.
       //Else send a CC message.
-        Serial.println("NOTE ON");
-        MIDI.sendNoteOn (MIDI_NOTE_NUMS[i], MIDI_NOTE_VELS[i], MIDI_CHAN);
+        
+        noteOn (MIDI_NOTE_NUMS[i], MIDI_NOTE_VELS[i], MIDI_CHAN);
     }
 
     //========================================
@@ -137,11 +137,11 @@ void loop()
 
     else if (buttons[i].risingEdge())
     {
-       Serial.println("RISING ON");
+       Serial.println(i);
       //If in note mode send a MIDI note-off message.
       //Else send a CC message with a value of 0.
-        Serial.println("NOTE OFF");
-          MIDI.sendNoteOff (MIDI_NOTE_NUMS[i], 0, MIDI_CHAN);
+        
+          noteOff (MIDI_NOTE_NUMS[i], MIDI_CHAN);
     }
 
   } //for (int i = 0; i < NUM_OF_BUTTONS; i++)
@@ -151,9 +151,22 @@ void loop()
   //==============================================================================
   // MIDI Controllers should discard incoming MIDI messages.
   // http://forum.pjrc.com/threads/24179-Teensy-3-Ableton-Analog-CC-causes-midi-crash
-  while (MIDI.read())
+  while (usbMIDI.read())
   {
     // ignoring incoming messages, so don't do anything here.
   }
   
+}
+
+void noteOn( int noteNumber, int noteVelocity, int channel) {
+  Serial.println("NOTE ON");
+   Serial.println(noteNumber);
+ MIDI1.sendNoteOn (noteNumber, noteVelocity, channel);
+ usbMIDI.sendNoteOn (noteNumber, noteVelocity, channel);
+}
+
+void noteOff( int noteNumber, int channel) {
+  Serial.println("NOTE OFF");
+ MIDI1.sendNoteOff (noteNumber, 0, channel);
+ usbMIDI.sendNoteOff (noteNumber, 0, channel);
 }
