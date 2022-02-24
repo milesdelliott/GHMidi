@@ -140,7 +140,7 @@ void loop()
     {
        Serial.println(i);
       //If in note mode send a MIDI note-off message.
-      //Else send a              CC message wit6th a value of 0.
+      //Else send a CC message wit6th a value of 0.
         
           noteOff (MIDI_NOTE_NUMS[i], MIDI_CHAN);
     }
