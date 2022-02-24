@@ -20,7 +20,7 @@
 // include MIDI library
 #include <MIDI.h>
 #include <Bounce.h>
-MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI1);
+MIDI_CREATE_DEFAULT_INSTANCE();
 const int channel = 1;
 //The number of push buttons
 const int NUM_OF_BUTTONS = 9;
@@ -71,8 +71,8 @@ const int MIDI_CC_PINS[NUM_OF_BUTTONS] = {12, 11, 10, 9, 8, 14, 15, 16, 17};
 
 void setup()
 {
-    Serial.begin(115200);
-  MIDI1.begin(MIDI_CHAN);
+    Serial.begin(31250);
+  
   // Configure the pins for input mode with pullup resistors.
   // The buttons/switch connect from each pin to ground.  When
   // the button is pressed/on, the pin reads LOW because the button
@@ -95,6 +95,7 @@ void setup()
     // initialize the digital pin as an output.
   pinMode(13, OUTPUT);
   Serial.println("Begin");
+  MIDI.begin(MIDI_CHAN);
 }
 
 //==============================================================================
@@ -139,7 +140,7 @@ void loop()
     {
        Serial.println(i);
       //If in note mode send a MIDI note-off message.
-      //Else send a CC message with a value of 0.
+      //Else send a              CC message wit6th a value of 0.
         
           noteOff (MIDI_NOTE_NUMS[i], MIDI_CHAN);
     }
@@ -161,12 +162,12 @@ void loop()
 void noteOn( int noteNumber, int noteVelocity, int channel) {
   Serial.println("NOTE ON");
    Serial.println(noteNumber);
- MIDI1.sendNoteOn (noteNumber, noteVelocity, channel);
+ MIDI.sendNoteOn (noteNumber, noteVelocity, channel);
  usbMIDI.sendNoteOn (noteNumber, noteVelocity, channel);
 }
 
 void noteOff( int noteNumber, int channel) {
   Serial.println("NOTE OFF");
- MIDI1.sendNoteOff (noteNumber, 0, channel);
+ MIDI.sendNoteOff (noteNumber, 0, channel);
  usbMIDI.sendNoteOff (noteNumber, 0, channel);
 }
