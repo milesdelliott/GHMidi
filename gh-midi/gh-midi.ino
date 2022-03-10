@@ -71,7 +71,9 @@ const int MIDI_CC_PINS[NUM_OF_BUTTONS] = {12, 11, 10, 9, 8, 14, 15, 16, 17};
 
 void setup()
 {
-    Serial.begin(31250);
+  Serial.begin(31250);    
+     // Enable serial for the MIDI DIN connector
+    Serial1.begin(31250);                                                           // Serial MIDI 31250 baud
   
   // Configure the pins for input mode with pullup resistors.
   // The buttons/switch connect from each pin to ground.  When
@@ -162,12 +164,16 @@ void loop()
 void noteOn( int noteNumber, int noteVelocity, int channel) {
   Serial.println("NOTE ON");
    Serial.println(noteNumber);
- MIDI.sendNoteOn (noteNumber, noteVelocity, channel);
+ Serial1.write(0x90 | channel);                                              // Send event type/channel to the MIDI serial bus
+    Serial1.write(noteNumber);                                                       // Send note number to the MIDI serial bus
+    Serial1.write(noteVelocity);    
  usbMIDI.sendNoteOn (noteNumber, noteVelocity, channel);
 }
 
 void noteOff( int noteNumber, int channel) {
   Serial.println("NOTE OFF");
- MIDI.sendNoteOff (noteNumber, 0, channel);
+ Serial1.write(0x80 | channel);                                              // Send event type/channel to the MIDI serial bus
+    Serial1.write(noteNumber);                                                       // Send note number to the MIDI serial bus
+    Serial1.write(0);  
  usbMIDI.sendNoteOff (noteNumber, 0, channel);
 }
