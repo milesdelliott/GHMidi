@@ -20,10 +20,10 @@
 // include MIDI library
 #include <MIDI.h>
 #include <Bounce.h>
-MIDI_CREATE_DEFAULT_INSTANCE();
+MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 const int channel = 1;
 //The number of push buttons
-const int NUM_OF_BUTTONS = 9;
+const int NUM_OF_BUTTONS = 5;
 
 // the MIDI channel number to send messages
 const int MIDI_CHAN = MIDI_CHANNEL_OMNI;
@@ -37,18 +37,20 @@ const int MIDI_CHAN = MIDI_CHANNEL_OMNI;
 //button debounce time
 const int DEBOUNCE_TIME = 5;
 
-Bounce buttons[NUM_OF_BUTTONS] =
+Bounce noteButtons[NUM_OF_BUTTONS] =
 {
   Bounce (12, DEBOUNCE_TIME),
   Bounce (11, DEBOUNCE_TIME),
   Bounce (10, DEBOUNCE_TIME),
   Bounce (9, DEBOUNCE_TIME),
   Bounce (8, DEBOUNCE_TIME),
-  Bounce (14, DEBOUNCE_TIME),
-  Bounce (15, DEBOUNCE_TIME),
-  Bounce (16, DEBOUNCE_TIME),
-  Bounce (17, DEBOUNCE_TIME),
 };
+
+
+Bounce upButton = Bounce (14, DEBOUNCE_TIME);
+Bounce downButton = Bounce (15, DEBOUNCE_TIME);
+Bounce plusButton = Bounce (16, DEBOUNCE_TIME);
+Bounce minusButton = Bounce (17, DEBOUNCE_TIME);
 
 const int MIDI_MODE_NOTES = 0;
 const int MIDI_MODE_CCS = 1;
@@ -57,11 +59,17 @@ const int MIDI_MODE_CCS = 1;
 int midiMode = MIDI_MODE_NOTES;
 
 //Arrays the store the exact note and CC messages each push button will send.
-const int MIDI_NOTE_NUMS[NUM_OF_BUTTONS] = {60, 59, 55, 50, 45, 40, 39, 38, 37};
-const int MIDI_NOTE_VELS[NUM_OF_BUTTONS] = {110, 110, 110, 110, 110, 110, 110, 110, 110};
-const int MIDI_CC_NUMS[NUM_OF_BUTTONS] = {24, 25, 26, 27, 20, 21, 22, 23, 28};
-const int MIDI_CC_VALS[NUM_OF_BUTTONS] = {127, 127, 127, 127, 127, 127, 127, 127, 127};
-const int MIDI_CC_PINS[NUM_OF_BUTTONS] = {12, 11, 10, 9, 8, 14, 15, 16, 17};
+const int MIDI_NOTE_NUMS[NUM_OF_BUTTONS] = {60, 59, 55, 50, 45};
+const int MIDI_NOTE_VELS[NUM_OF_BUTTONS] = {110, 110, 110, 110, 110};
+const int MIDI_CC_NUMS[NUM_OF_BUTTONS] = {24, 25, 26, 27, 20};
+const int MIDI_CC_VALS[NUM_OF_BUTTONS] = {127, 127, 127, 127, 127};
+const int MIDI_CC_PINS[NUM_OF_BUTTONS] = {12, 11, 10, 9, 8};
+
+const int MODE_MAJOR = 1;
+const int MODE_MINOR = 2;
+const int MODE_SINGLE = 0;
+
+int mode = MODE_SINGLE;
 
 
 //==============================================================================
@@ -112,39 +120,56 @@ void loop()
   // Update all the buttons/switch. There should not be any long
   // delays in loop(), so this runs repetitively at a rate
   // faster than the buttons could be pressed and released.
-  for (int i = 0; i < NUM_OF_BUTTONS + 1; i++)
-  {
-    buttons[i].update();
+  upButton.update()
+  downButton.update()
+  plusButton.update()
+  minusButton.update()
+
+  if (upButton.fallingEdge()) {
+    mode = MODE_MAJOR;
+  }
+  if (upButton.risingEdge()) {
+    mode = MODE_SINGLE;
   }
 
-  //==============================================================================
-  // Check the status of each push button
+  if (downButton.fallingEdge()) {
+    mode = MODE_MINOR;
+  }
+  if (downButton.risingEdge()) {
+    mode = MODE_SINGLE;
+  }
+
+  for (int i = 0; i < NUM_OF_BUTTONS + 1; i++)
+  {
+    noteButtons[i].update();
+  }
 
   for (int i = 0; i < NUM_OF_BUTTONS; i++)
   {
-    //========================================
-    // Check each button for "falling" edge.
-    // Falling = high (not pressed - voltage from pullup resistor) to low (pressed - button connects pin to ground)
 
-    if (buttons[i].fallingEdge())
+    if (noteButtons[i].fallingEdge())
     {
-      //If in note mode send a MIDI note-on message.
-      //Else send a CC message.
-        
+      if (mode === MODE_MAJOR) {
+        int[3] notes = notesMajor(MIDI_NOTE_NUMS[i]);
+        for (int i = 0, i < 3, i++) {
+          noteOn(notes[i],  MIDI_NOTE_VELS[i], MIDI_CHAN)
+        }
+      } else if( mode === MODE_MINOR) {
+        int[3] notes = notesMinor(MIDI_NOTE_NUMS[i]);
+        for (int i = 0, i < 3, i++) {
+          noteOn(notes[i],  MIDI_NOTE_VELS[i], MIDI_CHAN)
+        }
+      } else {
         noteOn (MIDI_NOTE_NUMS[i], MIDI_NOTE_VELS[i], MIDI_CHAN);
+      }
     }
 
-    //========================================
-    // Check each button for "rising" edge
-    // Rising = low (pressed - button connects pin to ground) to high (not pressed - voltage from pullup resistor)
-
-    else if (buttons[i].risingEdge())
-    {
-       Serial.println(i);
-      //If in note mode send a MIDI note-off message.
-      //Else send a CC message wit6th a value of 0.
-        
+    else if (noteButtons[i].risingEdge())
+    {      
           noteOff (MIDI_NOTE_NUMS[i], MIDI_CHAN);
+          noteOff (MIDI_NOTE_NUMS[i] + 3, MIDI_CHAN);
+          noteOff (MIDI_NOTE_NUMS[i] + 4, MIDI_CHAN);
+          noteOff (MIDI_NOTE_NUMS[i] + 7, MIDI_CHAN);
     }
 
   } //for (int i = 0; i < NUM_OF_BUTTONS; i++)
@@ -161,6 +186,14 @@ void loop()
   
 }
 
+int[3] notesMinor( rootNote ) {
+  return {rootNote, rootNote + 3, rootNote + 7};
+}
+
+int[3] notesMajor( rootNote ) {
+  return {rootNote, rootNote + 4, rootNote + 7};
+}
+
 void noteOn( int noteNumber, int noteVelocity, int channel) {
   Serial.println("NOTE ON");
    Serial.println(noteNumber);
@@ -168,6 +201,7 @@ void noteOn( int noteNumber, int noteVelocity, int channel) {
     Serial1.write(noteNumber);                                                       // Send note number to the MIDI serial bus
     Serial1.write(noteVelocity);    
  usbMIDI.sendNoteOn (noteNumber, noteVelocity, channel);
+  MIDI.sendNoteOn (noteNumber, noteVelocity, channel);
 }
 
 void noteOff( int noteNumber, int channel) {
@@ -176,4 +210,5 @@ void noteOff( int noteNumber, int channel) {
     Serial1.write(noteNumber);                                                       // Send note number to the MIDI serial bus
     Serial1.write(0);  
  usbMIDI.sendNoteOff (noteNumber, 0, channel);
+ MIDI.sendNoteOff (noteNumber, 0, channel);
 }
