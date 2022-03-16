@@ -65,6 +65,10 @@ const int MIDI_CC_NUMS[NUM_OF_BUTTONS] = {24, 25, 26, 27, 20};
 const int MIDI_CC_VALS[NUM_OF_BUTTONS] = {127, 127, 127, 127, 127};
 const int MIDI_CC_PINS[NUM_OF_BUTTONS] = {12, 11, 10, 9, 8};
 
+const int STARTING_NOTE = 60
+
+const scale = {0, 2, 2, 1, 2, 2, 2}
+
 const int MODE_MAJOR = 1;
 const int MODE_MINOR = 2;
 const int MODE_SINGLE = 0;
