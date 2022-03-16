@@ -120,10 +120,10 @@ void loop()
   // Update all the buttons/switch. There should not be any long
   // delays in loop(), so this runs repetitively at a rate
   // faster than the buttons could be pressed and released.
-  upButton.update()
-  downButton.update()
-  plusButton.update()
-  minusButton.update()
+  upButton.update();
+  downButton.update();
+  plusButton.update();
+  minusButton.update();
 
   if (upButton.fallingEdge()) {
     mode = MODE_MAJOR;
@@ -149,16 +149,14 @@ void loop()
 
     if (noteButtons[i].fallingEdge())
     {
-      if (mode === MODE_MAJOR) {
-        int[3] notes = notesMajor(MIDI_NOTE_NUMS[i]);
-        for (int i = 0, i < 3, i++) {
-          noteOn(notes[i],  MIDI_NOTE_VELS[i], MIDI_CHAN)
-        }
-      } else if( mode === MODE_MINOR) {
-        int[3] notes = notesMinor(MIDI_NOTE_NUMS[i]);
-        for (int i = 0, i < 3, i++) {
-          noteOn(notes[i],  MIDI_NOTE_VELS[i], MIDI_CHAN)
-        }
+      if (mode == MODE_MAJOR) {
+        noteOn(MIDI_NOTE_NUMS[i],  MIDI_NOTE_VELS[i], MIDI_CHAN);
+        noteOn(MIDI_NOTE_NUMS[i] + 4,  MIDI_NOTE_VELS[i], MIDI_CHAN);
+        noteOn(MIDI_NOTE_NUMS[i] + 7,  MIDI_NOTE_VELS[i], MIDI_CHAN);
+      } else if( mode == MODE_MINOR) {
+         noteOn(MIDI_NOTE_NUMS[i],  MIDI_NOTE_VELS[i], MIDI_CHAN);
+         noteOn(MIDI_NOTE_NUMS[i] + 3,  MIDI_NOTE_VELS[i], MIDI_CHAN);
+         noteOn(MIDI_NOTE_NUMS[i] + 7,  MIDI_NOTE_VELS[i], MIDI_CHAN);
       } else {
         noteOn (MIDI_NOTE_NUMS[i], MIDI_NOTE_VELS[i], MIDI_CHAN);
       }
@@ -186,13 +184,7 @@ void loop()
   
 }
 
-int[3] notesMinor( rootNote ) {
-  return {rootNote, rootNote + 3, rootNote + 7};
-}
 
-int[3] notesMajor( rootNote ) {
-  return {rootNote, rootNote + 4, rootNote + 7};
-}
 
 void noteOn( int noteNumber, int noteVelocity, int channel) {
   Serial.println("NOTE ON");
