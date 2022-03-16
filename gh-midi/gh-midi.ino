@@ -59,15 +59,19 @@ const int MIDI_MODE_CCS = 1;
 int midiMode = MIDI_MODE_NOTES;
 
 //Arrays the store the exact note and CC messages each push button will send.
-const int MIDI_NOTE_NUMS[NUM_OF_BUTTONS] = {60, 59, 55, 50, 45};
+// const int MIDI_NOTE_NUMS[NUM_OF_BUTTONS] = {60, 59, 55, 50, 45};
 const int MIDI_NOTE_VELS[NUM_OF_BUTTONS] = {110, 110, 110, 110, 110};
 const int MIDI_CC_NUMS[NUM_OF_BUTTONS] = {24, 25, 26, 27, 20};
 const int MIDI_CC_VALS[NUM_OF_BUTTONS] = {127, 127, 127, 127, 127};
 const int MIDI_CC_PINS[NUM_OF_BUTTONS] = {12, 11, 10, 9, 8};
 
-const int STARTING_NOTE = 60
+const int STARTING_NOTE = 55;
 
-const scale = {0, 2, 2, 1, 2, 2, 2}
+const int SCALE_8[8] = {0, 2, 4, 5, 7, 9, 11, 12};
+
+int rootNote = STARTING_NOTE;
+
+const int SCALE_5[5] = {0,2,4,7,9};
 
 const int MODE_MAJOR = 1;
 const int MODE_MINOR = 2;
@@ -75,6 +79,7 @@ const int MODE_SINGLE = 0;
 
 int mode = MODE_SINGLE;
 
+int whammyVal;
 
 //==============================================================================
 //==============================================================================
@@ -85,7 +90,7 @@ void setup()
 {
   Serial.begin(31250);    
      // Enable serial for the MIDI DIN connector
-    Serial1.begin(31250);                                                           // Serial MIDI 31250 baud
+  Serial1.begin(31250);                                                          // Serial MIDI 31250 baud
   
   // Configure the pins for input mode with pullup resistors.
   // The buttons/switch connect from each pin to ground.  When
@@ -119,6 +124,7 @@ void setup()
 
 void loop()
 {
+  whammyVal = analogRead(4); // Read Whammy Bar Potentiometer
   digitalWrite(13, HIGH);   // set the LED on
   //==============================================================================
   // Update all the buttons/switch. There should not be any long
@@ -143,6 +149,18 @@ void loop()
     mode = MODE_SINGLE;
   }
 
+  if (plusButton.fallingEdge()) {
+    rootNote = rootNote + 1;
+  }
+  if (plusButton.risingEdge()) {
+  }
+
+  if (minusButton.fallingEdge()) {
+    rootNote = rootNote - 1;
+  }
+  if (minusButton.risingEdge()) {
+  }
+
   for (int i = 0; i < NUM_OF_BUTTONS + 1; i++)
   {
     noteButtons[i].update();
@@ -154,27 +172,27 @@ void loop()
     if (noteButtons[i].fallingEdge())
     {
       if (mode == MODE_MAJOR) {
-        noteOn(MIDI_NOTE_NUMS[i],  MIDI_NOTE_VELS[i], MIDI_CHAN);
-        noteOn(MIDI_NOTE_NUMS[i] + 4,  MIDI_NOTE_VELS[i], MIDI_CHAN);
-        noteOn(MIDI_NOTE_NUMS[i] + 7,  MIDI_NOTE_VELS[i], MIDI_CHAN);
+        noteOn(rootNote + SCALE_5[i],  MIDI_NOTE_VELS[i], MIDI_CHAN);
+        noteOn(rootNote + SCALE_5[i] + 4,  MIDI_NOTE_VELS[i], MIDI_CHAN);
+        noteOn(rootNote + SCALE_5[i] + 7,  MIDI_NOTE_VELS[i], MIDI_CHAN);
       } else if( mode == MODE_MINOR) {
-         noteOn(MIDI_NOTE_NUMS[i],  MIDI_NOTE_VELS[i], MIDI_CHAN);
-         noteOn(MIDI_NOTE_NUMS[i] + 3,  MIDI_NOTE_VELS[i], MIDI_CHAN);
-         noteOn(MIDI_NOTE_NUMS[i] + 7,  MIDI_NOTE_VELS[i], MIDI_CHAN);
+         noteOn(rootNote + SCALE_5[i],  MIDI_NOTE_VELS[i], MIDI_CHAN);
+         noteOn(rootNote + SCALE_5[i] + 3,  MIDI_NOTE_VELS[i], MIDI_CHAN);
+         noteOn(rootNote + SCALE_5[i] + 7,  MIDI_NOTE_VELS[i], MIDI_CHAN);
       } else {
-        noteOn (MIDI_NOTE_NUMS[i], MIDI_NOTE_VELS[i], MIDI_CHAN);
+        noteOn (rootNote + SCALE_5[i], MIDI_NOTE_VELS[i], MIDI_CHAN);
       }
     }
 
     else if (noteButtons[i].risingEdge())
     {      
-          noteOff (MIDI_NOTE_NUMS[i], MIDI_CHAN);
-          noteOff (MIDI_NOTE_NUMS[i] + 3, MIDI_CHAN);
-          noteOff (MIDI_NOTE_NUMS[i] + 4, MIDI_CHAN);
-          noteOff (MIDI_NOTE_NUMS[i] + 7, MIDI_CHAN);
+          noteOff (rootNote + SCALE_5[i], MIDI_CHAN);
+          noteOff (rootNote + SCALE_5[i] + 3, MIDI_CHAN);
+          noteOff (rootNote + SCALE_5[i] + 4, MIDI_CHAN);
+          noteOff (rootNote + SCALE_5[i] + 7, MIDI_CHAN);
     }
 
-  } //for (int i = 0; i < NUM_OF_BUTTONS; i++)
+  } //for (int i = 0; i < NUM_O                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       F_BUTTONS; i++)
 
   //==============================================================================
   // Check the status of the toggle switch, and set the MIDI mode based on this.
@@ -207,4 +225,19 @@ void noteOff( int noteNumber, int channel) {
     Serial1.write(0);  
  usbMIDI.sendNoteOff (noteNumber, 0, channel);
  MIDI.sendNoteOff (noteNumber, 0, channel);
+}
+
+// Control Change
+// 1st byte = Event type (0x0B = Control Change).
+// 2nd byte = Event type bitwise ORed with MIDI channel.
+// 3rd byte = MIDI CC number (7-bit range 0-127).
+// 4th byte = Control value (7-bit range 0-127).
+void setControl(byte channel, byte control, byte value)
+{
+    channel = 0xB0 | channel;                                                   // Bitwise OR outside of the struct to prevent compiler warnings
+    Serial1.write(0xB0 | channel);                                              // Send event type/channel to the MIDI serial bus
+    Serial1.write(control);                                                     // Send control change number to the MIDI serial bus
+    Serial1.write(value);    
+    MIDI.sendControlChange(control, value, channel);
+    usbMIDI.sendControlChange(control, value, channel);                                               // Send control chnage value to the MIDI serial bus
 }
