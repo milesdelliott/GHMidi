@@ -125,6 +125,7 @@ void setup()
 void loop()
 {
   whammyVal = analogRead(4); // Read Whammy Bar Potentiometer
+  setControl(MIDI_CHAN, 1, normalizeWhammyVal(whammyVal));
   digitalWrite(13, HIGH);   // set the LED on
   //==============================================================================
   // Update all the buttons/switch. There should not be any long
@@ -234,10 +235,15 @@ void noteOff( int noteNumber, int channel) {
 // 4th byte = Control value (7-bit range 0-127).
 void setControl(byte channel, byte control, byte value)
 {
+  Serial.println(value);
     channel = 0xB0 | channel;                                                   // Bitwise OR outside of the struct to prevent compiler warnings
     Serial1.write(0xB0 | channel);                                              // Send event type/channel to the MIDI serial bus
     Serial1.write(control);                                                     // Send control change number to the MIDI serial bus
-    Serial1.write(value);    
+    Serial1.write(value);   
     MIDI.sendControlChange(control, value, channel);
     usbMIDI.sendControlChange(control, value, channel);                                               // Send control chnage value to the MIDI serial bus
+}
+
+int normalizeWhammyVal(int raw) {
+  return raw - 887 > 0 ? raw - 887 : 0;
 }
